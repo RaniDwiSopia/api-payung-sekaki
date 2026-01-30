@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Payung Sekaki</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; }
+        .card { border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; }
+        .btn { cursor: pointer; padding: 5px 10px; background: #0070f3; color: white; border: none; border-radius: 4px; }
+        .btn-red { background: red; }
+    </style>
+</head>
+<body>
+
+    <h1>👥 Data Orang Payung Sekaki</h1>
+    
+    <button onclick="ambilData()" class="btn">🔄 Refresh Data</button>
+    <hr>
+
+    <div id="wadah-data">Loading...</div>
+
+    <script>
+        const API_URL = "https://api-payung-sekaki.vercel.app";
+
+        // Fungsi Ambil Data dari API Abang
+        async function ambilData() {
+            const wadah = document.getElementById('wadah-data');
+            wadah.innerHTML = "Sedang mengambil data...";
+
+            try {
+                // INI BAGIAN UTAMA: Fetch ke API Abang
+                const respon = await fetch(`${API_URL}/orang`);
+                const data = await respon.json();
+
+                // Kosongkan wadah
+                wadah.innerHTML = "";
+
+                // Looping data (Munculin satu-satu)
+                data.forEach(orang => {
+                    const elemen = document.createElement('div');
+                    elemen.className = 'card';
+                    elemen.innerHTML = `
+                        <h3>👤 ${orang.name}</h3>
+                        <p>💼 Role: <b>${orang.role}</b></p>
+                        <p>🆔 ID: <small>${orang.id}</small></p>
+                        <p>Status: ${orang.is_active ? '✅ Aktif' : '❌ Non-Aktif'}</p>
+                    `;
+                    wadah.appendChild(elemen);
+                });
+
+            } catch (error) {
+                wadah.innerHTML = "❌ Gagal mengambil data: " + error.message;
+            }
+        }
+
+        // Jalankan saat pertama kali dibuka
+        ambilData();
+    </script>
+
+</body>
+</html>
