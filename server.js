@@ -80,3 +80,19 @@ app.listen(port, () => {
   console.log(`✅ Server Aman Terkendali di: http://localhost:${port}`)
 })
 
+// ✅ UPDATE (BUTUH TOKEN & ID)
+app.put('/orang/:id', cekToken, async (req, res) => {
+    const { id } = req.params
+    const { name, role, is_active } = req.body
+
+    const { data, error } = await supabase
+        .from('profiles')
+        .update({ name, role, is_active })
+        .eq('id', id) // Cari yang ID-nya cocok
+        .select()
+
+    if (error) return res.status(500).json({ error: error.message })
+    if (data.length === 0) return res.status(404).json({ pesan: "Orang tidak ditemukan!" })
+    
+    res.json({ pesan: "✅ Data berhasil diupdate!", data: data })
+})
