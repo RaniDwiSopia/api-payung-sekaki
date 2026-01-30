@@ -52,47 +52,49 @@ const cekSatpam = async (req, res, next) => {
     next()
 }
 
-// --- 3. ROUTES ---
-
-// ✅ GET (PUBLIK)
+// ✅ GET (PUBLIK) - Ambil semua data
 app.get('/orang', async (req, res) => {
   const { data, error } = await supabase.from('profiles').select('*')
   if (error) res.status(500).json({ error: error.message })
   else res.json(data)
 })
 
-// 🔒 POST (PRIVATE)
+// 🔒 POST (PRIVATE) - Tambah data (Butuh Token)
 app.post('/orang', cekSatpam, async (req, res) => {
   const { error } = await supabase.from('profiles').insert(req.body)
   if (error) res.status(500).json({ error: error.message })
   else res.json({ pesan: "✅ Data berhasil disimpan oleh Admin!" })
 })
 
-// 🔒 DELETE (PRIVATE)
-app.delete('/orang', cekSatpam, async (req, res) => {
-  const { id } = req.body
+// 🔒 DELETE (PRIVATE) - Hapus data by ID di URL (Butuh Token)
+// Perhatikan: pakai /:id biar bisa delete via URL
+app.delete('/orang/:id', cekSatpam, async (req, res) => {
+  const { id } = req.params // Ambil ID dari URL
   const { error } = await supabase.from('profiles').delete().eq('id', id)
-  if (error) res.status(500).json({ error: error.message })
-  else res.json({ pesan: "✅ Data berhasil dihapus Admin!" })
-})
-
-app.listen(port, () => {
-  console.log(`✅ Server Aman Terkendali di: http://localhost:${port}`)
+  
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ pesan: "✅ Data berhasil dihapus Admin!" })
 })
 
 // ✅ UPDATE (BUTUH TOKEN & ID)
-app.put('/orang/:id', cekToken, async (req, res) => {
+// Perhatikan: pakai cekSatpam (bukan cekToken)
+app.put('/orang/:id', cekSatpam, async (req, res) => {
     const { id } = req.params
     const { name, role, is_active } = req.body
 
     const { data, error } = await supabase
         .from('profiles')
         .update({ name, role, is_active })
-        .eq('id', id) // Cari yang ID-nya cocok
+        .eq('id', id) 
         .select()
 
     if (error) return res.status(500).json({ error: error.message })
     if (data.length === 0) return res.status(404).json({ pesan: "Orang tidak ditemukan!" })
     
     res.json({ pesan: "✅ Data berhasil diupdate!", data: data })
+})
+
+// --- JALANKAN SERVER (PALING BAWAH) ---
+app.listen(port, () => {
+  console.log(`✅ Server Aman Terkendali di: http://localhost:${port}`)
 })
