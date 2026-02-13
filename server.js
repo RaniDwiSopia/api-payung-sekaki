@@ -391,5 +391,5 @@ app.delete('/downloads/:id', cekSatpam, async (req, res) => {
 
 // --- START SERVER ---
 app.listen(port, () => {
-    console.log(`🚀 Server FULL FEATURE jalan di: http://localhost:${port}`)
+    console.log(`🚀 Server Payung Sekaki jalan di: http://localhost:${port}`)
 })
