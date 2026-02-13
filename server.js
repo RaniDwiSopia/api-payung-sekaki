@@ -21,24 +21,14 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 const storage = multer.memoryStorage()
 const upload = multer({ storage: storage })
 
-// --- FUNGSI PENCATAT LOG (AUDIT TRAIL) 🔥 BARU ---
-// Fungsi ini akan dipanggil diam-diam setiap ada aksi penting
+// --- FUNGSI PENCATAT LOG (AUDIT TRAIL) ---
 async function catatLog(action, details, ip) {
     const { error } = await supabase
         .from('activity_logs')
-        .insert([
-            { 
-                action: action, 
-                details: details, 
-                ip_address: ip 
-            }
-        ])
+        .insert([{ action, details, ip_address: ip }])
     
-    if (error) {
-        console.error("❌ Gagal mencatat log:", error.message)
-    } else {
-        console.log(`📝 LOG TERCATAT: [${action}] ${details}`)
-    }
+    if (error) console.error("❌ Gagal mencatat log:", error.message)
+    else console.log(`📝 LOG TERCATAT: [${action}] ${details}`)
 }
 
 // --- SATPAM (AUTH MIDDLEWARE) ---
@@ -56,23 +46,21 @@ const cekSatpam = async (req, res, next) => {
 
 // ================= ROUTES =================
 
-// --- 1. LOGIN (DENGAN PENYADAP) 🔥 UPDATE ---
+// --- 1. LOGIN ---
 app.post('/login', async (req, res) => {
     const { email, password } = req.body
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) return res.status(401).json({ pesan: "Login Gagal!", error: error.message })
 
-    // 🔥 CATAT SIAPA YANG LOGIN
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     await catatLog("LOGIN_SUKSES", `Admin ${email} berhasil masuk`, ip);
 
     res.json({ pesan: "Login Berhasil!", token: data.session.access_token })
 })
 
-// --- 2. ENDPOINT LIHAT LOG (KHUSUS DASHBOARD) 🔥 BARU ---
+// --- 2. LOGS ---
 app.get('/logs', cekSatpam, async (req, res) => {
-    // Mengambil 50 log terakhir, urut dari yang paling baru
     const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
@@ -111,16 +99,22 @@ app.delete('/orang/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Data berhasil dihapus!" })
 })
 
-// --- 4. NEWS / BERITA ---
+// --- 4. NEWS / BERITA (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/news', async (req, res) => {
-    const { data, error } = await supabase.from('news').select('*').eq('is_published', true).order('published_at', { ascending: false })
+    const { modul } = req.query // Tangkap ?modul=...
+    
+    let query = supabase.from('news').select('*').eq('is_published', true).order('published_at', { ascending: false })
+    
+    if (modul) { query = query.eq('modul', modul) } // Filter Modul
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
 
 app.post('/news', cekSatpam, upload.single('gambar'), async (req, res) => {
     try {
-        const { title, content } = req.body
+        const { title, content, modul } = req.body // Tangkap modul
         const file = req.file
 
         if (!title || !content) return res.status(400).json({ pesan: "Judul & Isi wajib diisi!" })
@@ -138,14 +132,16 @@ app.post('/news', cekSatpam, upload.single('gambar'), async (req, res) => {
         const simpleSlug = title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
 
         const { data, error } = await supabase.from('news').insert({
-            title, content, slug: simpleSlug, cover_image: publicURL, is_published: true, published_at: new Date()
+            title, 
+            content, 
+            modul: modul || 'balai', // Default ke balai kalau kosong
+            slug: simpleSlug, 
+            cover_image: publicURL, 
+            is_published: true, 
+            published_at: new Date()
         }).select()
 
         if (error) throw new Error(error.message)
-        
-        // (Optional) Kalau mau catat log berita juga bisa di sini
-        // await catatLog("UPLOAD_BERITA", `Berita baru: ${title}`, req.headers['x-forwarded-for']);
-
         res.json({ pesan: "✅ Berita Terbit!", data })
 
     } catch (err) {
@@ -160,16 +156,21 @@ app.delete('/news/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Berita dihapus." })
 })
 
-// --- 5. DOKUMENTASI ---
+// --- 5. DOKUMENTASI (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/documentation', async (req, res) => {
-    const { data, error } = await supabase.from('documentation').select('*').order('created_at', { ascending: false })
+    const { modul } = req.query
+    let query = supabase.from('documentation').select('*').order('created_at', { ascending: false })
+    
+    if (modul) { query = query.eq('modul', modul) }
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
 
 app.post('/documentation', cekSatpam, upload.single('gambar'), async (req, res) => {
     try {
-        const { title, description } = req.body
+        const { title, description, modul } = req.body
         const file = req.file
         let publicURL = null
 
@@ -181,7 +182,12 @@ app.post('/documentation', cekSatpam, upload.single('gambar'), async (req, res) 
             publicURL = urlData.publicUrl
         }
 
-        const { error } = await supabase.from('documentation').insert({ title, description, image_url: publicURL })
+        const { error } = await supabase.from('documentation').insert({ 
+            title, 
+            description, 
+            modul: modul || 'balai',
+            image_url: publicURL 
+        })
         if (error) throw error
         res.json({ pesan: "✅ Dokumentasi disimpan!" })
     } catch (err) {
@@ -195,9 +201,14 @@ app.delete('/documentation/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Dokumentasi dihapus." })
 })
 
-// --- 6. PAGES ---
+// --- 6. PAGES (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/pages', async (req, res) => {
-    const { data, error } = await supabase.from('pages').select('*')
+    const { modul } = req.query
+    let query = supabase.from('pages').select('*')
+    
+    if (modul) { query = query.eq('modul', modul) }
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
@@ -209,16 +220,23 @@ app.get('/pages/:slug', async (req, res) => {
 })
 
 app.post('/pages', cekSatpam, async (req, res) => {
-    const { title, content } = req.body
+    const { title, content, modul } = req.body
     const slug = title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
-    const { error } = await supabase.from('pages').insert({ title, content, slug })
+    
+    const { error } = await supabase.from('pages').insert({ 
+        title, content, slug, modul: modul || 'balai' 
+    })
+    
     if (error) return res.status(500).json({ error: error.message })
     res.json({ pesan: "✅ Halaman dibuat!" })
 })
 
 app.put('/pages/:id', cekSatpam, async (req, res) => {
-    const { title, content } = req.body
-    const { error } = await supabase.from('pages').update({ title, content, updated_at: new Date() }).eq('id', req.params.id)
+    const { title, content, modul } = req.body
+    const { error } = await supabase.from('pages').update({ 
+        title, content, modul, updated_at: new Date() 
+    }).eq('id', req.params.id)
+    
     if (error) return res.status(500).json({ error: error.message })
     res.json({ pesan: "✅ Halaman diupdate!" })
 })
@@ -229,16 +247,25 @@ app.delete('/pages/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Halaman dihapus." })
 })
 
-// --- 7. PROGRAM KERJA ---
+// --- 7. PROGRAM KERJA (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/programs', async (req, res) => {
-    const { data, error } = await supabase.from('programs').select('*').eq('is_active', true)
+    const { modul } = req.query
+    let query = supabase.from('programs').select('*').eq('is_active', true)
+    
+    if (modul) { query = query.eq('modul', modul) }
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
 
 app.post('/programs', cekSatpam, async (req, res) => {
-    const { name, description, cover_image } = req.body
-    const { error } = await supabase.from('programs').insert({ name, description, cover_image, is_active: true })
+    const { name, description, cover_image, modul } = req.body
+    
+    const { error } = await supabase.from('programs').insert({ 
+        name, description, cover_image, is_active: true, modul: modul || 'balai'
+    })
+    
     if (error) return res.status(500).json({ error: error.message })
     res.json({ pesan: "✅ Program ditambahkan!" })
 })
@@ -265,16 +292,21 @@ app.put('/settings', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Pengaturan disimpan!" })
 })
 
-// --- 9. BANNERS (DENGAN PENYADAP) 🔥 UPDATE ---
+// --- 9. BANNERS (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/banners', async (req, res) => {
-    const { data, error } = await supabase.from('banners').select('*').eq('is_active', true).order('created_at', { ascending: false })
+    const { modul } = req.query
+    let query = supabase.from('banners').select('*').eq('is_active', true).order('created_at', { ascending: false })
+    
+    if (modul) { query = query.eq('modul', modul) }
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
 
 app.post('/banners', cekSatpam, upload.single('gambar'), async (req, res) => {
     try {
-        const { title, subtitle } = req.body
+        const { title, subtitle, modul } = req.body
         const file = req.file
         
         if (!file) return res.status(400).json({ pesan: "Gambar banner wajib diupload!" })
@@ -286,11 +318,14 @@ app.post('/banners', cekSatpam, upload.single('gambar'), async (req, res) => {
         const { data: urlData } = supabase.storage.from('image').getPublicUrl(fileName)
 
         const { error } = await supabase.from('banners').insert({
-            title, subtitle, image_url: urlData.publicUrl, is_active: true
+            title, 
+            subtitle, 
+            image_url: urlData.publicUrl, 
+            is_active: true,
+            modul: modul || 'balai'
         })
         if (error) throw error
 
-        // 🔥 CATAT LOG BANNER
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         await catatLog("UPLOAD_BANNER", `Upload banner: ${title}`, ip);
 
@@ -306,16 +341,21 @@ app.delete('/banners/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Banner dihapus." })
 })
 
-// --- 10. DOWNLOADS (DENGAN PENYADAP) 🔥 UPDATE ---
+// --- 10. DOWNLOADS (🔥 SUDAH SUPPORT MODUL) ---
 app.get('/downloads', async (req, res) => {
-    const { data, error } = await supabase.from('downloads').select('*').order('created_at', { ascending: false })
+    const { modul } = req.query
+    let query = supabase.from('downloads').select('*').order('created_at', { ascending: false })
+    
+    if (modul) { query = query.eq('modul', modul) }
+
+    const { data, error } = await query
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
 
 app.post('/downloads', cekSatpam, upload.single('dokumen'), async (req, res) => {
     try {
-        const { title, category } = req.body
+        const { title, category, modul } = req.body
         const file = req.file
 
         if (!title || !file) return res.status(400).json({ pesan: "Judul dan File wajib diisi!" })
@@ -327,11 +367,13 @@ app.post('/downloads', cekSatpam, upload.single('dokumen'), async (req, res) => 
         const { data: urlData } = supabase.storage.from('documents').getPublicUrl(fileName)
 
         const { error } = await supabase.from('downloads').insert({
-            title, category, file_url: urlData.publicUrl
+            title, 
+            category, 
+            file_url: urlData.publicUrl,
+            modul: modul || 'balai'
         })
         if (error) throw error
 
-        // 🔥 CATAT LOG DOKUMEN
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         await catatLog("UPLOAD_DOKUMEN", `Upload file: ${title} (${category})`, ip);
 
