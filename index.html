@@ -3,36 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Payung Sekaki</title>
+    <title>Test API Payung Sekaki</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding-top: 50px; }
-        .container { width: 100%; max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 20px; color: #333; }
+        .container { width: 100%; max-width: 800px; background: white; padding: 25px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
         /* Tampilan Input */
-        input { width: 95%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        input, select, textarea { width: 100%; padding: 10px; margin: 8px 0 15px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; }
+        textarea { resize: vertical; height: 80px; }
         
         /* Tombol Utama */
-        .btn { width: 100%; padding: 10px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; margin-top: 10px; }
-        .btn-blue { background: #0070f3; color: white; }
-        .btn-red { background: #e00; color: white; width: auto; float: right; padding: 5px 15px; }
-        .btn:hover { opacity: 0.9; }
+        .btn { padding: 10px 15px; cursor: pointer; border: none; border-radius: 5px; font-weight: bold; transition: 0.3s; }
+        .btn-blue { background: #007bff; color: white; width: 100%; }
+        .btn-blue:hover { background: #0056b3; }
+        .btn-green { background: #28a745; color: white; width: 100%; }
+        .btn-green:hover { background: #218838; }
+        .btn-red { background: #dc3545; color: white; padding: 6px 12px; font-size: 14px; }
+        .btn-red:hover { background: #c82333; }
+        
+        /* Tombol Filter Modul */
+        .filter-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-filter { flex: 1; background: #e9ecef; color: #333; border: 1px solid #ccc; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-filter:hover { background: #d3d9df; }
+        .btn-filter.active { background: #17a2b8; color: white; border-color: #17a2b8; }
 
-        /* --- TAMBAHAN: Tombol Hapus Kecil --- */
-        .btn-trash { 
-            background: #ff4d4f; color: white; border: none; padding: 5px 10px; 
-            border-radius: 4px; cursor: pointer; font-size: 14px;
-        }
-        .btn-trash:hover { background: #d9363e; }
-
-        /* Card Data (Dibuat Flex biar tombol ada di kanan) */
-        .card { 
-            border-bottom: 1px solid #eee; padding: 15px 10px; 
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .badge { background: #e1ffe1; color: #008000; padding: 3px 8px; border-radius: 10px; font-size: 12px; }
+        /* Card Data */
+        .card { border: 1px solid #eee; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; background: #fafafa; }
+        .card-content { flex: 1; padding-right: 15px; }
+        .card img { max-width: 100px; border-radius: 5px; margin-top: 10px; }
+        .badge { background: #17a2b8; color: white; padding: 3px 8px; border-radius: 10px; font-size: 12px; font-weight: bold; }
 
         /* Sembunyikan Halaman */
         .hidden { display: none; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -40,36 +43,75 @@
     <div class="container">
         
         <div id="login-page">
-            <h2 style="text-align: center;">🔐 Login Admin</h2>
-            <div id="pesan-error" style="color: red; text-align: center;"></div>
+            <h2 style="text-align: center;">🔐 Login Admin Balai</h2>
+            <div id="pesan-error" style="color: red; text-align: center; margin-bottom: 10px;"></div>
             
-            <input type="email" id="email" placeholder="Email Admin (admin@payung.com)">
-            <input type="password" id="password" placeholder="Password Rahasia">
-            <button onclick="prosesLogin()" class="btn btn-blue">MASUK SEKARANG</button>
+            <label>Email Admin</label>
+            <input type="email" id="email" placeholder="contoh: admin@payungsekaki.com">
+            
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Masukkan password">
+            
+            <button onclick="prosesLogin()" class="btn btn-blue">MASUK</button>
         </div>
 
         <div id="dashboard-page" class="hidden">
-            <div style="overflow: hidden; margin-bottom: 20px;">
-                <h2 style="float: left; margin: 0;">👋 Halo, Admin!</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">👋 Dashboard Testing API</h2>
                 <button onclick="logout()" class="btn btn-red">Keluar</button>
             </div>
             <hr>
-            <h3>Data Orang</h3>
-            <div id="wadah-data">Sedang mengambil data...</div>
+
+            <h3>📝 Tambah Berita / Kegiatan Baru</h3>
+            <form id="formTambah" onsubmit="tambahData(event)" style="background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                <label>Judul Kegiatan:</label>
+                <input type="text" id="input-title" required placeholder="Contoh: Senam Pagi Bersama">
+
+                <label>Pilih Modul Target:</label>
+                <select id="input-modul">
+                    <option value="lansia">Lansia & Anak (Posyandu, Senam)</option>
+                    <option value="keluarga">Keluarga (PKK, Edukasi)</option>
+                    <option value="balai">Balai (Umum, Pengumuman)</option>
+                </select>
+
+                <label>Isi Konten / Deskripsi:</label>
+                <textarea id="input-content" required placeholder="Tulis rincian kegiatan di sini..."></textarea>
+
+                <label>Upload Gambar / Brosur:</label>
+                <input type="file" id="input-gambar" accept="image/*">
+
+                <button type="submit" class="btn btn-green">📤 UPLOAD DATA KE VERCEL</button>
+            </form>
+
+            <hr>
+
+            <h3>📋 Daftar Kegiatan (Pilih Modul)</h3>
+            
+            <div class="filter-group">
+                <button class="btn-filter" id="btn-lansia" onclick="ambilData('lansia')">👵 Lansia</button>
+                <button class="btn-filter" id="btn-keluarga" onclick="ambilData('keluarga')">👨‍👩‍👧 Keluarga</button>
+                <button class="btn-filter" id="btn-balai" onclick="ambilData('balai')">🏛️ Balai</button>
+            </div>
+
+            <div id="wadah-data" style="margin-top: 15px;">
+                <i>Silakan klik salah satu tombol modul di atas untuk melihat data.</i>
+            </div>
         </div>
 
     </div>
 
     <script>
+        // Ganti dengan URL Vercel Abang yang asli
         const API_URL = "https://api-payung-sekaki.vercel.app";
+        let modulAktif = "lansia"; // Default load
 
-        // 1. FUNGSI LOGIN
+        // ================= 1. FUNGSI LOGIN =================
         async function prosesLogin() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const pesanError = document.getElementById('pesan-error');
 
-            pesanError.innerText = "Sedang memeriksa...";
+            pesanError.innerText = "⏳ Sedang menghubungi Vercel...";
 
             try {
                 const respon = await fetch(`${API_URL}/login`, {
@@ -84,94 +126,146 @@
                     localStorage.setItem('token_rahasia', hasil.token);
                     cekStatusLogin();
                 } else {
-                    pesanError.innerText = "❌ " + hasil.pesan;
+                    pesanError.innerText = "❌ " + (hasil.message || "Gagal Login");
                 }
             } catch (err) {
-                pesanError.innerText = "Error: " + err.message;
+                pesanError.innerText = "❌ Error Server: " + err.message;
             }
         }
 
-        // 2. FUNGSI CEK STATUS
         function cekStatusLogin() {
             const token = localStorage.getItem('token_rahasia');
             if (token) {
                 document.getElementById('login-page').classList.add('hidden');
                 document.getElementById('dashboard-page').classList.remove('hidden');
-                ambilData();
+                ambilData('lansia'); // Ambil data lansia saat pertama masuk
             } else {
                 document.getElementById('login-page').classList.remove('hidden');
                 document.getElementById('dashboard-page').classList.add('hidden');
             }
         }
 
-        // 3. FUNGSI LOGOUT
         function logout() {
             localStorage.removeItem('token_rahasia');
             location.reload();
         }
 
-        // 4. FUNGSI AMBIL DATA (Diupdate ada tombol hapus)
-        async function ambilData() {
+        // ================= 2. FUNGSI AMBIL DATA (GET) =================
+        async function ambilData(modul) {
+            modulAktif = modul; // Simpan status modul yang sedang dibuka
             const wadah = document.getElementById('wadah-data');
-            
+            wadah.innerHTML = "⏳ Mengambil data dari awan...";
+
+            // Ubah warna tombol filter biar kelihatan mana yang aktif
+            document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${modul}`).classList.add('active');
+
             try {
-                const respon = await fetch(`${API_URL}/orang`);
+                // Tembak API pakai filter ?modul=
+                const respon = await fetch(`${API_URL}/news?modul=${modul}`);
                 const data = await respon.json();
 
                 wadah.innerHTML = "";
                 
-                if(data.length === 0) {
-                    wadah.innerHTML = "Belum ada data.";
+                if(!data || data.length === 0) {
+                    wadah.innerHTML = `<div style="text-align:center; padding: 20px; color: #888;">Belum ada berita untuk modul <b>${modul}</b>. Silakan tambah di atas.</div>`;
                     return;
                 }
 
-                data.forEach(orang => {
+                data.forEach(item => {
+                    // Cek apakah ada gambar, kalau tidak kasih placeholder kosong
+                    const gambarHtml = item.cover_image 
+                        ? `<img src="${item.cover_image}" alt="Gambar Berita">` 
+                        : `<div style="font-size:12px; color:#aaa; margin-top:10px;">[Tanpa Gambar]</div>`;
+
                     wadah.innerHTML += `
                         <div class="card">
-                            <div>
-                                <b>${orang.name}</b> <br>
-                                <small>💼 ${orang.role}</small> 
-                                ${orang.is_active ? '<span class="badge">Aktif</span>' : '❌'}
+                            <div class="card-content">
+                                <h4 style="margin: 0 0 5px 0;">${item.title} <span class="badge">${item.modul}</span></h4>
+                                <p style="font-size: 14px; color: #555; margin: 0 0 10px 0;">${item.content}</p>
+                                ${gambarHtml}
                             </div>
-                            <button onclick="hapusData('${orang.id}')" class="btn-trash">🗑️ Hapus</button>
+                            <button onclick="hapusData('${item.id}')" class="btn btn-red">🗑️ Hapus</button>
                         </div>
                     `;
                 });
-
             } catch (err) {
-                wadah.innerHTML = "Gagal ambil data.";
+                wadah.innerHTML = "❌ Gagal mengambil data: " + err.message;
             }
         }
 
-        // --- 5. FUNGSI HAPUS DATA (BARU) ---
-        async function hapusData(idOrang) {
-            // Konfirmasi dulu biar gak salah pencet
-            if(!confirm("Yakin mau hapus data ini?")) return;
+        // ================= 3. FUNGSI TAMBAH DATA (POST) =================
+        async function tambahData(event) {
+            event.preventDefault(); // Mencegah halaman refresh
+            const token = localStorage.getItem('token_rahasia');
+            const tombolSubmit = document.querySelector('button[type="submit"]');
+            
+            tombolSubmit.innerText = "⏳ Sedang Mengupload...";
+            tombolSubmit.disabled = true;
+
+            // Kita pakai FormData karena ada UPLOAD FILE GAMBAR
+            const formData = new FormData();
+            formData.append('title', document.getElementById('input-title').value);
+            formData.append('content', document.getElementById('input-content').value);
+            formData.append('modul', document.getElementById('input-modul').value);
+            
+            const fileGambar = document.getElementById('input-gambar').files[0];
+            if(fileGambar) {
+                formData.append('gambar', fileGambar); // 'gambar' harus sesuai dengan nama field yang ditangkap backend
+            }
+
+            try {
+                const respon = await fetch(`${API_URL}/news`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                        // CATATAN: Jangan set Content-Type kalau pakai FormData, browser akan set otomatis (multipart/form-data)
+                    },
+                    body: formData
+                });
+
+                if (respon.ok) {
+                    alert("✅ Data Berhasil Diupload!");
+                    document.getElementById('formTambah').reset(); // Kosongkan form
+                    ambilData(document.getElementById('input-modul').value); // Refresh list data sesuai modul yang baru diupload
+                } else {
+                    const errorJson = await respon.json();
+                    alert("❌ Gagal upload: " + (errorJson.message || respon.statusText));
+                }
+            } catch (err) {
+                alert("❌ Error: " + err.message);
+            } finally {
+                tombolSubmit.innerText = "📤 UPLOAD DATA KE VERCEL";
+                tombolSubmit.disabled = false;
+            }
+        }
+
+        // ================= 4. FUNGSI HAPUS DATA (DELETE) =================
+        async function hapusData(id) {
+            if(!confirm("⚠️ Yakin mau hapus data ini secara permanen?")) return;
 
             const token = localStorage.getItem('token_rahasia');
 
             try {
-                const respon = await fetch(`${API_URL}/orang/${idOrang}`, {
+                const respon = await fetch(`${API_URL}/news/${id}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Authorization': 'Bearer ' + token // Wajib bawa token!
-                    }
+                    headers: { 'Authorization': 'Bearer ' + token }
                 });
 
                 if (respon.ok) {
                     alert("✅ Data berhasil dihapus!");
-                    ambilData(); // Refresh list otomatis
+                    ambilData(modulAktif); // Refresh data pada modul yang sedang aktif
                 } else {
-                    alert("Gagal menghapus! Pastikan token valid.");
+                    const errorJson = await respon.json();
+                    alert("❌ Gagal menghapus: " + (errorJson.message || "Token tidak valid"));
                 }
             } catch (err) {
-                alert("Error: " + err.message);
+                alert("❌ Error: " + err.message);
             }
         }
 
-        // Jalankan saat pertama kali dibuka
+        // Jalankan saat pertama kali web dibuka
         cekStatusLogin();
     </script>
-
 </body>
 </html>

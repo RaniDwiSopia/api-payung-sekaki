@@ -389,6 +389,65 @@ app.delete('/downloads/:id', cekSatpam, async (req, res) => {
     res.json({ pesan: "✅ Dokumen dihapus." })
 })
 
+// --- 11. REGISTRASI PROGRAM (BINA KELUARGA / LANSIA) ---
+
+// [GET] Admin melihat daftar pendaftar
+app.get('/registrations', cekSatpam, async (req, res) => {
+    // Kita pakai select('*, programs(name, modul)') untuk nge-JOIN nama program dan modulnya
+    const { data, error } = await supabase
+        .from('registrations')
+        .select(`
+            *,
+            programs (
+                name,
+                modul
+            )
+        `)
+        .order('created_at', { ascending: false })
+
+    if (error) return res.status(500).json({ error: error.message })
+    res.json(data)
+})
+
+// [POST] User / Warga melakukan pendaftaran (TIDAK PAKAI cekSatpam)
+app.post('/registrations', async (req, res) => {
+    try {
+        const { program_id, full_name, nik, address, phone_number } = req.body
+
+        // Validasi simpel: pastikan data penting tidak kosong
+        if (!program_id || !full_name || !nik) {
+            return res.status(400).json({ pesan: "Program, Nama, dan NIK wajib diisi!" })
+        }
+
+        const { error } = await supabase.from('registrations').insert({
+            program_id,
+            full_name,
+            nik,
+            address,
+            phone_number
+        })
+
+        if (error) throw error
+
+        // Opsional: Catat di log kalau ada yang daftar
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await catatLog("PENDAFTARAN_BARU", `Pendaftar baru: ${full_name} (NIK: ${nik})`, ip);
+
+        res.status(201).json({ pesan: "✅ Pendaftaran berhasil dikirim!" })
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
+// [DELETE] Admin menghapus data pendaftar
+app.delete('/registrations/:id', cekSatpam, async (req, res) => {
+    const { id } = req.params
+    const { error } = await supabase.from('registrations').delete().eq('id', id)
+    
+    if (error) return res.status(500).json({ error: error.message })
+    res.json({ pesan: "✅ Data pendaftar berhasil dihapus." })
+})
+
 // --- START SERVER ---
 app.listen(port, () => {
     console.log(`🚀 Server Payung Sekaki jalan di: http://localhost:${port}`)
