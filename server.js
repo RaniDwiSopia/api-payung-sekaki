@@ -149,6 +149,66 @@ app.post('/news', cekSatpam, upload.single('gambar'), async (req, res) => {
     }
 })
 
+// --- TARUH KODE INI DI BAWAH APP.POST('/NEWS') DAN DI ATAS APP.DELETE('/NEWS/:ID') ---
+
+app.put('/news/:id', cekSatpam, upload.single('gambar'), async (req, res) => {
+    try {
+        const { id } = req.params
+        const { title, content, modul } = req.body
+        const file = req.file
+
+        if (!title || !content) return res.status(400).json({ pesan: "Judul & Isi wajib diisi!" })
+
+        // 1. Ambil data berita lama untuk mempertahankan gambar jika tidak ada gambar baru yang diunggah
+        const { data: beritaLama, error: fetchError } = await supabase
+            .from('news')
+            .select('cover_image')
+            .eq('id', id)
+            .single()
+            
+        if (fetchError || !beritaLama) return res.status(404).json({ pesan: "Berita tidak ditemukan!" })
+
+        let publicURL = beritaLama.cover_image // Default gunakan url gambar lama
+
+        // 2. Jika admin mengunggah berkas gambar baru, lakukan proses upload ke Supabase
+        if (file) {
+            const fileExt = file.originalname.split('.').pop()
+            const fileName = `news-${Date.now()}.${fileExt}`
+            const { error: uploadError } = await supabase.storage.from('image').upload(fileName, file.buffer, { contentType: file.mimetype })
+            if (uploadError) throw new Error(uploadError.message)
+            
+            const { data: urlData } = supabase.storage.from('image').getPublicUrl(fileName)
+            publicURL = urlData.publicUrl
+        }
+
+        const simpleSlug = title.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
+
+        // 3. Eksekusi pembaruan data di Supabase
+        const { data, error } = await supabase
+            .from('news')
+            .update({
+                title,
+                content,
+                modul: modul || 'balai',
+                slug: simpleSlug,
+                cover_image: publicURL,
+                updated_at: new Date()
+            })
+            .eq('id', id)
+            .select()
+
+        if (error) throw new Error(error.message)
+        
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await catatLog("EDIT_BERITA", `Admin mengubah berita ID: ${id}`, ip);
+
+        res.json({ pesan: "✅ Berita berhasil diupdate!", data })
+
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
 app.delete('/news/:id', cekSatpam, async (req, res) => {
     const { id } = req.params
     const { error } = await supabase.from('news').delete().eq('id', id)

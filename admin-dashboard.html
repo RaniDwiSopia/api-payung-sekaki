@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-5xl mx-auto bg-white p-8 rounded shadow-md border-t-4 border-indigo-600">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">📋 Rekap Data Pendaftar</h2>
+            <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 font-semibold text-sm">
+                Keluar (Logout)
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-indigo-100 text-indigo-900">
+                        <th class="border border-indigo-200 p-3">Nama Lengkap</th>
+                        <th class="border border-indigo-200 p-3">NIK</th>
+                        <th class="border border-indigo-200 p-3">Program Binaan</th>
+                        <th class="border border-indigo-200 p-3">Modul</th>
+                        <th class="border border-indigo-200 p-3">No. Telepon</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" class="text-center p-4 text-gray-500">⏳ Sedang menarik data dari server...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_REGISTRATIONS = 'https://api-payung-sekaki.vercel.app/registrations';
+        
+        // 1. Ambil Token dari Brankas Browser
+        const token = localStorage.getItem('token_admin');
+
+        // 2. Proteksi Halaman: Kalau nggak ada token, usir ke Login
+        if (!token) {
+            alert('⛔ Eits, kamu belum login! Balik ke halaman login dulu sana.');
+            window.location.href = 'admin-login.html';
+        }
+
+        // 3. Fungsi Narik Data
+        async function loadDataPendaftar() {
+            try {
+                const response = await fetch(API_REGISTRATIONS, {
+                    method: 'GET',
+                    // Kirim token saktinya di Header
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = ''; 
+                
+                // Kalau token ditolak (misal udah expired)
+                if (!response.ok) {
+                    alert('❌ Sesi kamu habis atau token tidak valid. Silakan login ulang.');
+                    logout();
+                    return;
+                }
+
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">Belum ada warga yang daftar nih.</td></tr>';
+                    return;
+                }
+
+                // Render baris tabel
+                data.forEach(item => {
+                    const namaProgram = item.programs ? item.programs.name : 'Program Dihapus';
+                    const namaModul = item.programs ? item.programs.modul : '-';
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="border p-3 font-medium text-gray-800">${item.full_name}</td>
+                            <td class="border p-3 text-gray-600">${item.nik}</td>
+                            <td class="border p-3 text-indigo-600 font-semibold">${namaProgram}</td>
+                            <td class="border p-3"><span class="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded border border-yellow-300">${namaModul}</span></td>
+                            <td class="border p-3 text-gray-600">${item.phone_number || '-'}</td>
+                        </tr>
+                    `;
+                });
+            } catch (error) {
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-red-500">❌ Error koneksi ke server!</td></tr>';
+            }
+        }
+
+        // 4. Fungsi Logout
+        function logout() {
+            localStorage.removeItem('token_admin'); // Hapus token dari brankas
+            window.location.href = 'admin-login.html'; // Lempar ke login
+        }
+
+        // Jalankan narik data pas halaman dimuat
+        loadDataPendaftar();
+    </script>
+</body>
+</html>

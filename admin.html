@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Rekap Pendaftar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-4xl mx-auto bg-white p-8 rounded shadow-md">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">📋 Data Pendaftar Masuk</h2>
+        
+        <div class="mb-4 flex gap-2">
+            <input type="text" id="tokenInput" class="w-full border p-2 rounded" placeholder="Masukkan Token Admin (eyJhbGciOi...)">
+            <button onclick="loadData()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 whitespace-nowrap">Tarik Data</button>
+        </div>
+
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="border p-2">Nama</th>
+                    <th class="border p-2">NIK</th>
+                    <th class="border p-2">Program</th>
+                    <th class="border p-2">Modul</th>
+                    <th class="border p-2">No. HP</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr><td colspan="5" class="text-center p-4 text-gray-500">Belum ada data ditarik. Masukkan token lalu klik "Tarik Data".</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // GANTI URL INI KE URL BACKEND KAMU
+        const API_URL = 'http://localhost:3001/registrations'; 
+
+        async function loadData() {
+            const token = document.getElementById('tokenInput').value;
+            if (!token) return alert('Token wajib diisi dulu, Brok!');
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    return alert('❌ Gagal: ' + (data.error || data.pesan));
+                }
+
+                const tbody = document.getElementById('tableBody');
+                tbody.innerHTML = ''; // Kosongkan tabel
+                
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4">Belum ada pendaftar.</td></tr>';
+                    return;
+                }
+
+                // Render baris tabel
+                data.forEach(item => {
+                    // Karena kita pake join, data program ada di dalam object 'programs'
+                    const namaProgram = item.programs ? item.programs.name : 'Program Dihapus';
+                    const namaModul = item.programs ? item.programs.modul : '-';
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="border p-2 font-medium">${item.full_name}</td>
+                            <td class="border p-2">${item.nik}</td>
+                            <td class="border p-2 text-blue-600">${namaProgram}</td>
+                            <td class="border p-2"><span class="bg-yellow-200 text-yellow-800 text-xs px-2 py-1 rounded">${namaModul}</span></td>
+                            <td class="border p-2">${item.phone_number || '-'}</td>
+                        </tr>
+                    `;
+                });
+
+            } catch (error) {
+                alert('Error koneksi ke server!');
+            }
+        }
+    </script>
+</body>
+</html>

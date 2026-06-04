@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Pendaftaran Program</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-md mx-auto bg-white p-8 rounded shadow-md">
+        <a href="program.html" class="text-sm text-blue-500 hover:underline mb-4 inline-block">&larr; Kembali ke List Program</a>
+        
+        <h2 class="text-2xl font-bold mb-6 text-center text-blue-600">Form Pendaftaran</h2>
+        
+        <form id="formDaftar" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">ID Program (Otomatis dari URL)</label>
+                <input type="text" id="program_id" class="w-full border p-2 rounded mt-1 bg-gray-200 text-gray-500 cursor-not-allowed" readonly required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Nama Lengkap</label>
+                <input type="text" id="full_name" class="w-full border p-2 rounded mt-1" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">NIK</label>
+                <input type="text" id="nik" class="w-full border p-2 rounded mt-1" required>
+            </div>
+            <div>
+                <label class="block text-sm font-medium">Alamat</label>
+                <input type="text" id="address" class="w-full border p-2 rounded mt-1">
+            </div>
+            <div>
+                <label class="block text-sm font-medium">No. Telepon/WA</label>
+                <input type="text" id="phone_number" class="w-full border p-2 rounded mt-1">
+            </div>
+            
+            <button type="submit" id="btnSubmit" class="w-full bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700">Daftar Sekarang</button>
+        </form>
+    </div>
+
+    <script>
+        // 1. Tangkap ID dari URL yang dikirim dari program.html
+        const urlParams = new URLSearchParams(window.location.search);
+        const idProgramDariURL = urlParams.get('id');
+
+        if (idProgramDariURL) {
+            document.getElementById('program_id').value = idProgramDariURL;
+        } else {
+            alert("Eh, kamu belum milih program! Balik lagi ke halaman sebelumnya ya.");
+            document.getElementById('btnSubmit').disabled = true;
+            document.getElementById('btnSubmit').classList.replace('bg-blue-600', 'bg-gray-400');
+        }
+
+        // 2. Proses Kirim Data ke API Backend
+        const API_REGISTRATIONS = 'https://api-payung-sekaki.vercel.app/registrations';
+
+        document.getElementById('formDaftar').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                program_id: document.getElementById('program_id').value,
+                full_name: document.getElementById('full_name').value,
+                nik: document.getElementById('nik').value,
+                address: document.getElementById('address').value,
+                phone_number: document.getElementById('phone_number').value
+            };
+
+            try {
+                const response = await fetch(API_REGISTRATIONS, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert('🔥 Yesss! ' + result.pesan);
+                    window.location.href = 'program.html'; // Habis sukses daftar, lempar balik ke halaman program
+                } else {
+                    alert('❌ Gagal: ' + (result.error || result.pesan));
+                }
+            } catch (error) {
+                alert('❌ Error koneksi ke server! Cek terminal backend kamu.');
+            }
+        });
+    </script>
+</body>
+</html>

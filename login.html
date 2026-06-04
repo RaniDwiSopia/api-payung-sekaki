@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin - Payung Sekaki</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-800 flex items-center justify-center h-screen">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-96">
+        <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Login Admin 🕵️‍♂️</h2>
+        
+        <form id="formLogin" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="email" class="w-full border p-2 rounded mt-1" required placeholder="admin@example.com">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Password</label>
+                <input type="password" id="password" class="w-full border p-2 rounded mt-1" required>
+            </div>
+            
+            <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 rounded hover:bg-indigo-700 transition">
+                Masuk
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Ganti URL kalau port backend kamu beda
+        const API_LOGIN = 'https://api-payung-sekaki.vercel.app/login';
+
+        // Cek kalau udah pernah login, langsung lempar ke dasbor
+        if (localStorage.getItem('token_admin')) {
+            window.location.href = 'admin-dashboard.html';
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch(API_LOGIN, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Simpan Token di brankas browser (localStorage)
+                    localStorage.setItem('token_admin', result.token);
+                    alert('✅ Login Berhasil, Brok!');
+                    // Pindah ke halaman Dasbor
+                    window.location.href = 'admin-dashboard.html';
+                } else {
+                    alert('❌ Login Gagal: ' + (result.error || result.pesan));
+                }
+            } catch (error) {
+                alert('❌ Error koneksi ke server! Backend udah nyala belum?');
+            }
+        });
+    </script>
+</body>
+</html>

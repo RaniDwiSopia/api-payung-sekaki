@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Program Tersedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold mb-8 text-center text-blue-700">Pilih Program Binaan</h2>
+        
+        <div id="listProgram" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <p class="text-gray-500">⏳ Sedang memuat program dari server...</p>
+        </div>
+    </div>
+
+    <script>
+        // Pastikan backend kamu jalan di port 3001
+        const API_PROGRAMS = 'https://api-payung-sekaki.vercel.app/programs';
+
+        async function loadPrograms() {
+            try {
+                const response = await fetch(API_PROGRAMS);
+                const data = await response.json();
+                
+                const container = document.getElementById('listProgram');
+                container.innerHTML = ''; // Kosongin tulisan loading
+                
+                if(data.length === 0) {
+                    container.innerHTML = '<p class="text-red-500">Belum ada program di database.</p>';
+                    return;
+                }
+
+                // Bikin kartu (card) buat tiap program
+                data.forEach(program => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white p-6 rounded-lg shadow-md border-t-4 border-blue-500';
+                    card.innerHTML = `
+                        <h3 class="text-xl font-bold text-gray-800">${program.name}</h3>
+                        <p class="text-sm text-gray-500 mt-1 mb-4">Modul: ${program.modul}</p>
+                        <p class="text-gray-600 mb-6 text-sm line-clamp-3">${program.description || 'Tidak ada deskripsi.'}</p>
+                        
+                        <a href="daftar.html?id=${program.id}" class="inline-block bg-blue-600 text-white font-semibold px-4 py-2 rounded hover:bg-blue-700 transition">
+                            Daftar Program Ini
+                        </a>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (error) {
+                document.getElementById('listProgram').innerHTML = '<p class="text-red-500">❌ Server Backend mati! Jangan lupa jalankan "npm start" di folder backend.</p>';
+            }
+        }
+
+        loadPrograms();
+    </script>
+</body>
+</html>
