@@ -149,7 +149,6 @@ app.post('/news', cekSatpam, upload.single('gambar'), async (req, res) => {
     }
 })
 
-// --- TARUH KODE INI DI BAWAH APP.POST('/NEWS') DAN DI ATAS APP.DELETE('/NEWS/:ID') ---
 
 app.put('/news/:id', cekSatpam, upload.single('gambar'), async (req, res) => {
     try {
@@ -250,6 +249,55 @@ app.post('/documentation', cekSatpam, upload.single('gambar'), async (req, res) 
         })
         if (error) throw error
         res.json({ pesan: "✅ Dokumentasi disimpan!" })
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
+})
+
+// --- COPAST INI KE BACKEND LU (DI BAWAH APP.POST DOKUMENTASI) ---
+app.put('/documentation/:id', cekSatpam, upload.single('gambar'), async (req, res) => {
+    try {
+        const { id } = req.params
+        const { title, description, modul } = req.body
+        const file = req.file
+        
+        // 1. Ambil data lama dulu untuk tahu gambar lamanya apa
+        const { data: dataLama, error: getErr } = await supabase
+            .from('documentation')
+            .select('image_url')
+            .eq('id', id)
+            .single()
+            
+        if (getErr || !dataLama) return res.status(404).json({ error: "Data dokumentasi tidak ditemukan" })
+
+        let publicURL = dataLama.image_url // Default pakai gambar lama jika tidak upload baru
+
+        // 2. Jika user upload gambar baru, proses upload ke storage Supabase
+        if (file) {
+            const fileName = `doc-${Date.now()}-${file.originalname}`
+            const { error: upErr } = await supabase.storage
+                .from('image')
+                .upload(fileName, file.buffer, { contentType: file.mimetype })
+                
+            if (upErr) throw upErr
+            
+            const { data: urlData } = supabase.storage.from('image').getPublicUrl(fileName)
+            publicURL = urlData.publicUrl
+        }
+
+        // 3. Update data baru ke table database Supabase
+        const { error: updateErr } = await supabase
+            .from('documentation')
+            .update({ 
+                title, 
+                description, 
+                modul: modul || 'balai',
+                image_url: publicURL 
+            })
+            .eq('id', id)
+
+        if (updateErr) throw updateErr
+        res.json({ pesan: "✅ Dokumentasi berhasil diperbarui!" })
     } catch (err) {
         res.status(500).json({ error: err.message })
     }
