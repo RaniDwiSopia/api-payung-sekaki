@@ -217,7 +217,7 @@ app.delete('/news/:id', cekSatpam, async (req, res) => {
     const { error } = await supabase.from('news').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    await catatLog("HAPUS_BERITA", `Admin menghapus berita ID: ${id}`, ip);
+    await catatLog("HAPUS_BERITA", "Admin menghapus berita ID: " + id, ip);
     res.json({ pesan: "✅ Berita dihapus." })
 })
 
@@ -255,7 +255,7 @@ app.post('/documentation', cekSatpam, upload.single('gambar'), async (req, res) 
         })
         if (error) throw error
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        await catatLog("TAMBAH_GALERI", `Admin menambah galeri baru: "${title}"`, ip);
+        await catatLog("TAMBAH_GALERI", "Admin menambah galeri baru: " + title, ip);
         res.json({ pesan: "✅ Dokumentasi disimpan!" })
     } catch (err) {
         res.status(500).json({ error: err.message })
@@ -288,7 +288,7 @@ app.put('/documentation/:id', cekSatpam, upload.single('gambar'), async (req, re
                 
             if (upErr) throw upErr
             const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-            await catatLog("EDIT_GALERI", `Admin merubah galeri ID: ${id} menjadi "${title}"`, ip);
+            await catatLog("EDIT_GALERI", "Admin merubah galeri ID: " + id + " menjadi " + title, ip);
             const { data: urlData } = supabase.storage.from('image').getPublicUrl(fileName)
             publicURL = urlData.publicUrl
         }
@@ -315,7 +315,7 @@ app.delete('/documentation/:id', cekSatpam, async (req, res) => {
     const { error } = await supabase.from('documentation').delete().eq('id', req.params.id)
     if (error) return res.status(500).json({ error: error.message })
     const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-    await catatLog("HAPUS_GALERI", `Admin menghapus galeri ID: ${req.params.id}`, ip);
+    await catatLog("HAPUS_GALERI", "Admin menghapus galeri ID: " + req.params.id, ip);
     res.json({ pesan: "✅ Dokumentasi dihapus." })
 })
 
