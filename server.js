@@ -60,7 +60,7 @@ app.post('/login', async (req, res) => {
 })
 
 // --- 2. LOGS ---
-app.get('/logs', cekSatpam, async (req, res) => {
+app.get('/aktivitas', cekSatpam, async (req, res) => {
     const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
@@ -70,6 +70,7 @@ app.get('/logs', cekSatpam, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message })
     res.json(data)
 })
+
 
 // --- 3. USERS / PROFILES ---
 app.get('/orang', async (req, res) => {
@@ -142,6 +143,9 @@ app.post('/news', cekSatpam, upload.single('gambar'), async (req, res) => {
         }).select()
 
         if (error) throw new Error(error.message)
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await catatLog("TAMBAH_BERITA", `Admin menambah berita baru: "${title}"`, ip);
+
         res.json({ pesan: "✅ Berita Terbit!", data })
 
     } catch (err) {
@@ -212,6 +216,8 @@ app.delete('/news/:id', cekSatpam, async (req, res) => {
     const { id } = req.params
     const { error } = await supabase.from('news').delete().eq('id', id)
     if (error) return res.status(500).json({ error: error.message })
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    await catatLog("HAPUS_BERITA", `Admin menghapus berita ID: ${id}`, ip);
     res.json({ pesan: "✅ Berita dihapus." })
 })
 
@@ -248,13 +254,14 @@ app.post('/documentation', cekSatpam, upload.single('gambar'), async (req, res) 
             image_url: publicURL 
         })
         if (error) throw error
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await catatLog("TAMBAH_GALERI", `Admin menambah galeri baru: "${title}"`, ip);
         res.json({ pesan: "✅ Dokumentasi disimpan!" })
     } catch (err) {
         res.status(500).json({ error: err.message })
     }
 })
 
-// --- COPAST INI KE BACKEND LU (DI BAWAH APP.POST DOKUMENTASI) ---
 app.put('/documentation/:id', cekSatpam, upload.single('gambar'), async (req, res) => {
     try {
         const { id } = req.params
@@ -280,7 +287,8 @@ app.put('/documentation/:id', cekSatpam, upload.single('gambar'), async (req, re
                 .upload(fileName, file.buffer, { contentType: file.mimetype })
                 
             if (upErr) throw upErr
-            
+            const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+            await catatLog("EDIT_GALERI", `Admin merubah galeri ID: ${id} menjadi "${title}"`, ip);
             const { data: urlData } = supabase.storage.from('image').getPublicUrl(fileName)
             publicURL = urlData.publicUrl
         }
@@ -306,6 +314,8 @@ app.put('/documentation/:id', cekSatpam, upload.single('gambar'), async (req, re
 app.delete('/documentation/:id', cekSatpam, async (req, res) => {
     const { error } = await supabase.from('documentation').delete().eq('id', req.params.id)
     if (error) return res.status(500).json({ error: error.message })
+    const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    await catatLog("HAPUS_GALERI", `Admin menghapus galeri ID: ${req.params.id}`, ip);
     res.json({ pesan: "✅ Dokumentasi dihapus." })
 })
 
