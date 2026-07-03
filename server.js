@@ -527,26 +527,36 @@ app.get('/registrations', cekSatpam, async (req, res) => {
     res.json(data)
 })
 
-// [POST] User / Warga melakukan pendaftaran (TIDAK PAKAI cekSatpam)
-// [DELETE] Admin menghapus data pendaftar
-app.delete('/registrations/:id', cekSatpam, async (req, res) => {
-    const { id } = req.params
-    
-    // 1. TAMBAHIN .select() DI UJUNG QUERY
-    const { data, error } = await supabase
-        .from('registrations')
-        .delete()
-        .eq('id', id)
-        .select() 
-    
-    if (error) return res.status(500).json({ error: error.message })
-    
-    // 2. CEK APAKAH DATA BENERAN KEHAPUS DARI DB
-    if (!data || data.length === 0) {
-        return res.status(404).json({ pesan: "❌ Gagal menghapus! Data tidak ditemukan atau akses ditolak oleh DB." })
-    }
+app.post('/registrations', async (req, res) => {
+    try {
+        const { 
+            program_id, full_name, nik, address, phone_number,
+            status_peserta, jenis_kb, tanggal_pelayanan, faskes 
+        } = req.body
+        if (!program_id || !full_name || !nik) {
+            return res.status(400).json({ pesan: "Program, Nama, dan NIK wajib diisi!" })
+        }
+        const { error } = await supabase.from('registrations').insert({
+            program_id,
+            full_name,
+            nik,
+            address,
+            phone_number,
+            status_peserta,    
+            jenis_kb,          
+            tanggal_pelayanan, 
+            faskes             
+        })
 
-    res.json({ pesan: "✅ Data pendaftar berhasil dihapus." })
+        if (error) throw error
+
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        await catatLog("PENDAFTARAN_BARU", `Pendaftar baru: ${full_name} (NIK: ${nik})`, ip);
+
+        res.status(201).json({ pesan: "✅ Pendaftaran berhasil dikirim!" })
+    } catch (err) {
+        res.status(500).json({ error: err.message })
+    }
 })
 
 
